@@ -1,0 +1,186 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >-
+  teach-ai-backend-v1
+
+Transform:
+- AWS::Serverless-2016-10-31
+
+Parameters:
+  Stage:
+    Type: String
+    Default: test
+
+Globals:
+  Function:
+    Runtime: nodejs14.x
+    Tracing: Active
+    Timeout: 540
+    MemorySize: 256
+    Environment:
+      Variables:
+        STAGE: test
+        REGION: us-east-1
+  Api:
+    TracingEnabled: True
+
+Resources:
+  RestApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: !Ref Stage
+      Auth:
+        DefaultAuthorizer: APIAuthorizer
+        Authorizers:
+          APIAuthorizer:
+            FunctionPayloadType: REQUEST
+            FunctionArn: !GetAtt Authorizer.Arn
+            Identity:
+              Headers:
+                - Authorization
+                - X-Cognito-Issuer
+              ReauthorizeEvery: 900
+
+  Authorizer:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/middlewares/authorizer.handler
+      Description: Custom authorizer for controlling access to API
+
+  #XXX: Users
+  usersGet:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/users.get
+      Description: Get a single user
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - AmazonDynamoDBFullAccess
+      Events:
+        usersGet:
+          Type: Api
+          Properties:
+            Path: /v1/users/{id}
+            Method: get
+            RestApiId: !Ref RestApi
+
+  usersList:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/users.list
+      Description: List all users
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - AmazonDynamoDBFullAccess
+      Events:
+        usersList:
+          Type: Api
+          Properties:
+            Path: /v1/users
+            Method: get
+            RestApiId: !Ref RestApi
+
+  usersUpdate:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/users.put
+      Description: Update a user record
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - AmazonDynamoDBFullAccess
+        - AmazonCognitoPowerUser
+      Events:
+        usersUpdate:
+          Type: Api
+          Properties:
+            Path: /v1/users/{id}
+            Method: put
+            RestApiId: !Ref RestApi
+
+  usersCreate:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/users.post
+      Description: Create a user
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - AmazonDynamoDBFullAccess
+        - AmazonCognitoPowerUser
+      Events:
+        usersCreate:
+          Type: Api
+          Properties:
+            Path: /v1/users
+            Method: post
+            RestApiId: !Ref RestApi
+
+  #XXX: API Keys
+  apiKeysGet:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/apiKeys.get
+      Description: Get an API key
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - AmazonDynamoDBFullAccess
+      Events:
+        apiKeysGet:
+          Type: Api
+          Properties:
+            Path: /v1/api-keys/{id}
+            Method: get
+            RestApiId: !Ref RestApi
+
+  apiKeysList:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/apiKeys.list
+      Description: List all API Keys
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - AmazonDynamoDBFullAccess
+      Events:
+        apiKeysList:
+          Type: Api
+          Properties:
+            Path: /v1/api-keys
+            Method: get
+            RestApiId: !Ref RestApi
+
+  apiKeysCreate:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/apiKeys.post
+      Description: Create an API key
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - AmazonDynamoDBFullAccess
+        - AmazonCognitoPowerUser
+      Events:
+        apiKeysCreate:
+          Type: Api
+          Properties:
+            Path: /v1/api-keys
+            Method: post
+            RestApiId: !Ref RestApi
+
+  apiKeysDelete:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: src/handlers/apiKeys.delete
+      Description: Delete an API key record
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - AmazonDynamoDBFullAccess
+        - AmazonCognitoPowerUser
+      Events:
+        apiKeysDelete:
+          Type: Api
+          Properties:
+            Path: /v1/api-keys/{id}
+            Method: delete
+            RestApiId: !Ref RestApi
+
+Outputs:
+  WebEndpoint:
+    Description: "API Gateway endpoint URL for Prod stage"
+    Value: !Sub "https://${RestApi}.execute-api.${AWS::Region}.amazonaws.com/${Stage}/"

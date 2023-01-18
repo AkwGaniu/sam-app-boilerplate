@@ -1,0 +1,13 @@
+version = 0.1
+[teachAI]
+[teachAI.deploy]
+[teachAI.deploy.parameters]
+stack_name = "teach-ai-backend-v1-test"
+s3_bucket = "aws-sam-cli-managed-default-samclisourcebucket-13c9agt0qtioh"
+s3_prefix = "teach-ai-backend-v1-test"
+region = "us-east-1"
+profile = "teachAI"
+capabilities = "CAPABILITY_IAM"
+disable_rollback = true
+parameter_overrides = "Stage=\"test\""
+image_repositories = []
